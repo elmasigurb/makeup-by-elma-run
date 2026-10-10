@@ -1,0 +1,16 @@
+{
+  "name": "Makeup by Elma Rún",
+  "short_name": "Elma Rún",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#f8f5ef",
+  "theme_color": "#1b1a18",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "500x500",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

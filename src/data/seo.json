@@ -1,0 +1,57 @@
+{
+  "siteName": "Makeup by Elma Rún",
+  "siteUrl": "https://www.makeupbyelmarun.com",
+  "defaultImage": "/og-preview.png",
+  "defaultImageAlt": "Makeup by Elma Rún brand logo on an ivory background",
+  "locale": "en_IS",
+  "pages": [
+    {
+      "path": "/",
+      "title": "Makeup by Elma Rún | Professional Makeup Artist in Iceland",
+      "description": "Discover professional makeup artistry by Elma Rún in Iceland. Explore bridal, event and editorial makeup, view the portfolio and send a booking inquiry.",
+      "heading": "Elma Rún — Makeup Artist in Iceland",
+      "summary": "Professional bridal, event and editorial makeup in Iceland, with an editorial approach tailored to each client and occasion.",
+      "index": true
+    },
+    {
+      "path": "/portfolio",
+      "title": "Makeup Portfolio | Bridal, Event & Editorial | Elma Rún",
+      "description": "Explore Elma Rún’s professional makeup portfolio, including bridal makeup, special events, studio beauty, photoshoots, hair styling and editorial work in Iceland.",
+      "heading": "Makeup Portfolio",
+      "summary": "Selected bridal, event, studio and editorial makeup work by Elma Rún in Iceland.",
+      "index": true
+    },
+    {
+      "path": "/about",
+      "title": "About Elma Rún | Professional Makeup Artist in Iceland",
+      "description": "Meet Elma Rún, a professional makeup artist in Iceland creating refined, personal looks for weddings, events, studio work and editorial projects.",
+      "heading": "Meet the Artist",
+      "summary": "Learn about Elma Rún’s background, experience and considered approach to professional makeup artistry.",
+      "index": true
+    },
+    {
+      "path": "/services",
+      "title": "Makeup Services & Pricing in Iceland | Elma Rún",
+      "description": "Explore professional makeup services by Elma Rún in Iceland, including bridal makeup, event makeup, photoshoots and editorial beauty, with current pricing details.",
+      "heading": "Makeup Services & Pricing",
+      "summary": "Professional makeup services for weddings, special events, photoshoots and editorial productions in Iceland.",
+      "index": true
+    },
+    {
+      "path": "/contact",
+      "title": "Contact & Book a Makeup Artist in Iceland | Elma Rún",
+      "description": "Send a booking inquiry to Elma Rún for bridal makeup, event makeup, photoshoots or editorial makeup services in Iceland.",
+      "heading": "Contact & Booking",
+      "summary": "Start a booking inquiry for professional makeup services in Iceland. An inquiry does not confirm an appointment.",
+      "index": true
+    },
+    {
+      "path": "/privacy",
+      "title": "Privacy Notice | Makeup by Elma Rún",
+      "description": "Read how Makeup by Elma Rún handles personal information submitted through the website booking inquiry form.",
+      "heading": "Privacy Notice",
+      "summary": "How information submitted through the booking inquiry form is collected, used and protected.",
+      "index": true
+    }
+  ]
+}

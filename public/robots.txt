@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://www.makeupbyelmarun.com/sitemap.xml
