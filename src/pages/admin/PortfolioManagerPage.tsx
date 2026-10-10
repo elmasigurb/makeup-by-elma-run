@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type DragEvent } from 'react'
-import { ArrowDown, ArrowUp, GripVertical, ImagePlus, LoaderCircle, Save, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Eye, GripVertical, ImagePlus, LoaderCircle, Save, Trash2 } from 'lucide-react'
 import { ConfirmDialog } from '../../components/admin/ConfirmDialog'
+import { EditorPreviewModal } from '../../components/admin/editor/EditorPreviewModal'
 import { PortfolioUploadPanel } from '../../components/admin/portfolio/PortfolioUploadPanel'
+import { PortfolioDetails } from '../../components/portfolio/PortfolioDetails'
+import { PortfolioPlaceholder } from '../../components/portfolio/PortfolioPlaceholder'
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges'
 import {
   deletePortfolioItem,
   fetchAdminPortfolio,
   readImageDimensions,
   replacePortfolioImage,
+  toGalleryItems,
   updatePortfolioItem,
   updatePortfolioOrder,
 } from '../../services/portfolioService'
@@ -23,11 +28,16 @@ export function PortfolioManagerPage() {
   const [savingOrder, setSavingOrder] = useState(false)
   const [deleteCandidate, setDeleteCandidate] = useState<PortfolioRecord | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set())
+  const [previewId, setPreviewId] = useState<string | null>(null)
+
+  useUnsavedChanges(dirtyIds.size > 0)
 
   const loadItems = useCallback(async () => {
     try {
       const records = await fetchAdminPortfolio()
       setItems(records)
+      setDirtyIds(new Set())
     } catch (error) {
       setFeedback({ type: 'error', message: error instanceof Error ? error.message : 'Portfolio items could not be loaded.' })
     } finally {
@@ -48,13 +58,15 @@ export function PortfolioManagerPage() {
 
   const patchItem = (id: string, updates: Partial<PortfolioRecord>) => {
     setItems((current) => current.map((item) => item.id === id ? { ...item, ...updates } : item))
+    setDirtyIds((current) => new Set(current).add(id))
   }
 
   const saveItem = async (item: PortfolioRecord) => {
     setBusyId(item.id)
     try {
       const saved = await updatePortfolioItem(item.id, {
-        title: item.title.trim() || 'Untitled',
+        title: item.title.trim(),
+        subtitle: item.subtitle.trim(),
         description: item.description.trim(),
         alt_text: item.alt_text.trim() || item.title.trim() || 'Portfolio image',
         category: item.category,
@@ -63,9 +75,22 @@ export function PortfolioManagerPage() {
         published: item.published,
         width: item.width,
         height: item.height,
+        makeup_artist: item.makeup_artist.trim(),
+        photographer: item.photographer.trim(),
+        model_name: item.model_name.trim(),
+        hair_stylist: item.hair_stylist.trim(),
+        stylist_creative_director: item.stylist_creative_director.trim(),
+        location: item.location.trim(),
+        project_date: item.project_date || null,
+        additional_credits: item.additional_credits.trim(),
       })
       setItems((current) => current.map((candidate) => candidate.id === saved.id ? saved : candidate))
-      showMessage(`“${saved.title}” was saved.`, 'success')
+      setDirtyIds((current) => {
+        const next = new Set(current)
+        next.delete(saved.id)
+        return next
+      })
+      showMessage(`“${saved.title || 'Untitled image'}” was saved.`, 'success')
     } catch (error) {
       showMessage(error instanceof Error ? error.message : 'The item could not be saved.', 'error')
     } finally {
@@ -121,8 +146,15 @@ export function PortfolioManagerPage() {
     try {
       const dimensions = await readImageDimensions(file)
       const result = await replacePortfolioImage(item, file, dimensions)
-      setItems((current) => current.map((candidate) => candidate.id === item.id ? result.record : candidate))
-      showMessage(result.warning ?? `“${item.title}” was replaced.`, result.warning ? 'error' : 'success')
+      setItems((current) => current.map((candidate) => candidate.id === item.id ? {
+        ...candidate,
+        image_path: result.record.image_path,
+        signedUrl: result.record.signedUrl,
+        width: result.record.width,
+        height: result.record.height,
+        updated_at: result.record.updated_at,
+      } : candidate))
+      showMessage(result.warning ?? `“${item.title || 'Untitled image'}” was replaced.`, result.warning ? 'error' : 'success')
     } catch (error) {
       showMessage(error instanceof Error ? error.message : 'The image could not be replaced.', 'error')
     } finally {
@@ -137,6 +169,11 @@ export function PortfolioManagerPage() {
       const warning = await deletePortfolioItem(deleteCandidate)
       const remaining = items.filter((item) => item.id !== deleteCandidate.id)
       setItems(remaining)
+      setDirtyIds((current) => {
+        const next = new Set(current)
+        next.delete(deleteCandidate.id)
+        return next
+      })
       setDeleteCandidate(null)
       if (remaining.length) await updatePortfolioOrder(remaining)
       showMessage(warning ?? 'Portfolio image deleted.', warning ? 'error' : 'success')
@@ -146,6 +183,8 @@ export function PortfolioManagerPage() {
       setDeleting(false)
     }
   }
+
+  const previewItem = previewId ? items.find((item) => item.id === previewId) ?? null : null
 
   return (
     <section>
@@ -219,8 +258,12 @@ export function PortfolioManagerPage() {
 
                 <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
                   <label className="sm:col-span-2">
-                    <span className="admin-field-label">Title</span>
-                    <input value={item.title} onChange={(event) => patchItem(item.id, { title: event.target.value })} className="admin-input font-serif text-2xl" />
+                    <span className="admin-field-label">Title / headline</span>
+                    <input value={item.title} onChange={(event) => patchItem(item.id, { title: event.target.value })} className="admin-input font-serif text-2xl" placeholder="Optional public title" />
+                  </label>
+                  <label className="sm:col-span-2">
+                    <span className="admin-field-label">Subtitle</span>
+                    <input value={item.subtitle} onChange={(event) => patchItem(item.id, { subtitle: event.target.value })} className="admin-input text-sm" placeholder="Optional project subtitle" />
                   </label>
                   <label>
                     <span className="admin-field-label">Category</span>
@@ -234,7 +277,25 @@ export function PortfolioManagerPage() {
                   </label>
                   <label className="sm:col-span-2">
                     <span className="admin-field-label">Description</span>
-                    <textarea value={item.description} onChange={(event) => patchItem(item.id, { description: event.target.value })} rows={2} className="admin-input resize-y text-sm" placeholder="Optional portfolio description" />
+                    <textarea value={item.description} onChange={(event) => patchItem(item.id, { description: event.target.value })} rows={3} className="admin-input resize-y text-sm" placeholder="Optional project description" />
+                  </label>
+                  <div className="border-t border-ink/10 pt-5 sm:col-span-2">
+                    <p className="admin-field-label">Credits & project details</p>
+                    <p className="mt-1 text-xs leading-relaxed text-ink/45">Leave any field empty to hide it from the public image viewer.</p>
+                  </div>
+                  <PortfolioTextField label="Makeup artist" value={item.makeup_artist} onChange={(value) => patchItem(item.id, { makeup_artist: value })} />
+                  <PortfolioTextField label="Photographer" value={item.photographer} onChange={(value) => patchItem(item.id, { photographer: value })} />
+                  <PortfolioTextField label="Model" value={item.model_name} onChange={(value) => patchItem(item.id, { model_name: value })} />
+                  <PortfolioTextField label="Hair stylist" value={item.hair_stylist} onChange={(value) => patchItem(item.id, { hair_stylist: value })} />
+                  <PortfolioTextField label="Stylist / creative director" value={item.stylist_creative_director} onChange={(value) => patchItem(item.id, { stylist_creative_director: value })} />
+                  <PortfolioTextField label="Location" value={item.location} onChange={(value) => patchItem(item.id, { location: value })} />
+                  <label>
+                    <span className="admin-field-label">Date</span>
+                    <input type="date" value={item.project_date ?? ''} onChange={(event) => patchItem(item.id, { project_date: event.target.value || null })} className="admin-input text-sm" />
+                  </label>
+                  <label className="sm:col-span-2">
+                    <span className="admin-field-label">Additional credits</span>
+                    <textarea value={item.additional_credits} onChange={(event) => patchItem(item.id, { additional_credits: event.target.value })} rows={3} className="admin-input resize-y text-sm" placeholder="Optional additional names or production credits" />
                   </label>
                   <div className="flex flex-wrap gap-5 text-sm text-ink/65 sm:col-span-2">
                     <label className="flex items-center gap-2"><input type="checkbox" checked={item.featured} onChange={(event) => patchItem(item.id, { featured: event.target.checked })} /> Featured on homepage</label>
@@ -243,13 +304,16 @@ export function PortfolioManagerPage() {
                 </div>
 
                 <div className="flex gap-2 md:flex-col">
+                  <button type="button" onClick={() => setPreviewId(item.id)} className="inline-flex min-h-10 items-center justify-center gap-2 border border-ink/15 px-4 text-xs uppercase tracking-[0.14em] hover:border-ink">
+                    <Eye size={15} /> Preview
+                  </button>
                   <button type="button" onClick={() => void saveItem(item)} disabled={busyId === item.id} className="inline-flex min-h-10 items-center justify-center gap-2 bg-ink px-4 text-xs uppercase tracking-[0.14em] text-ivory disabled:opacity-50">
                     {busyId === item.id ? <LoaderCircle className="animate-spin" size={15} /> : <Save size={15} />} Save
                   </button>
                   <button type="button" onClick={() => setDeleteCandidate(item)} disabled={busyId === item.id} className="inline-flex min-h-10 items-center justify-center gap-2 border border-ink/15 px-4 text-xs uppercase tracking-[0.14em] text-ink/55 hover:border-[#7f3d34] hover:text-[#7f3d34]">
                     <Trash2 size={15} /> Delete
                   </button>
-                  <span className={`mt-1 text-center text-[0.65rem] uppercase tracking-[0.14em] md:mt-2 ${item.published ? 'text-ink/55' : 'text-ink/30'}`}>{item.published ? 'Live' : 'Draft'}</span>
+                  <span className={`mt-1 text-center text-[0.65rem] uppercase tracking-[0.14em] md:mt-2 ${dirtyIds.has(item.id) ? 'text-[#7f3d34]' : item.published ? 'text-ink/55' : 'text-ink/30'}`}>{dirtyIds.has(item.id) ? 'Unsaved' : item.published ? 'Live' : 'Draft'}</span>
                 </div>
               </article>
             ))}
@@ -265,6 +329,35 @@ export function PortfolioManagerPage() {
         onCancel={() => !deleting && setDeleteCandidate(null)}
         onConfirm={() => void confirmDelete()}
       />
+
+      <EditorPreviewModal open={Boolean(previewItem)} title={previewItem?.title || 'Portfolio image'} onClose={() => setPreviewId(null)}>
+        {previewItem && <PortfolioAdminPreview item={previewItem} />}
+      </EditorPreviewModal>
     </section>
+  )
+}
+
+function PortfolioTextField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label>
+      <span className="admin-field-label">{label}</span>
+      <input value={value} onChange={(event) => onChange(event.target.value)} className="admin-input text-sm" placeholder="Optional" />
+    </label>
+  )
+}
+
+function PortfolioAdminPreview({ item }: { item: PortfolioRecord }) {
+  const preview = toGalleryItems([item])[0]
+  return (
+    <div className="grid min-h-full bg-ink text-ivory lg:grid-cols-[minmax(0,1.65fr)_minmax(21rem,0.65fr)]">
+      <div className="flex min-h-[62svh] items-center justify-center px-6 py-14 sm:px-14 lg:min-h-full">
+        <div className="max-h-[72svh] max-w-full overflow-hidden" style={{ aspectRatio: preview.aspectRatio, height: 'min(68svh, 800px)' }}>
+          <PortfolioPlaceholder item={preview} priority className="object-contain" />
+        </div>
+      </div>
+      <aside className="border-t border-ivory/15 px-6 py-10 sm:px-10 lg:flex lg:items-center lg:border-l lg:border-t-0">
+        <PortfolioDetails item={preview} />
+      </aside>
+    </div>
   )
 }

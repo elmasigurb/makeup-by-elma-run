@@ -84,19 +84,17 @@ export function PortfolioGallery() {
               type="button"
               onClick={() => setLightboxIndex(index)}
               className="group block w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
-              aria-label={`Open ${item.title} in lightbox`}
+              aria-label={`Open ${item.title || `${item.category} portfolio image`} in lightbox`}
             >
-              <div className="overflow-hidden" style={{ aspectRatio: item.aspectRatio }}>
+              <div className="relative overflow-hidden bg-ink" style={{ aspectRatio: item.aspectRatio }}>
                 <PortfolioPlaceholder
                   item={item}
-                  className="transition-transform duration-700 ease-out group-hover:scale-[1.015]"
+                  className="transition duration-700 ease-out group-hover:scale-[1.015] group-hover:opacity-90"
                 />
+                <span className="absolute bottom-3 right-3 translate-y-1 text-[0.62rem] uppercase tracking-[0.2em] text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">View</span>
               </div>
             </button>
-            <figcaption className="flex items-baseline justify-between gap-4 px-0.5 pb-4 pt-3">
-              <span className="font-serif text-xl leading-none">{item.title}</span>
-              <span className="text-[0.7rem] uppercase tracking-[0.16em] text-ink/45">{item.category}</span>
-            </figcaption>
+            {item.title && <figcaption className="px-0.5 pb-4 pt-3 font-serif text-xl leading-none">{item.title}</figcaption>}
           </figure>
         ))}
       </div>

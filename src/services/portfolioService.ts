@@ -27,36 +27,73 @@ async function addSignedUrls(
   )
 }
 
-const columns = 'id,title,description,alt_text,category,image_path,display_order,featured,published,width,height,created_at,updated_at'
+const legacyColumns = 'id,title,description,alt_text,category,image_path,display_order,featured,published,width,height,created_at,updated_at'
+const columns = `${legacyColumns},subtitle,makeup_artist,photographer,model_name,hair_stylist,stylist_creative_director,location,project_date,additional_credits`
+
+type PortfolioRow = Omit<PortfolioRecord, 'signedUrl'>
+
+const emptyDetails = {
+  subtitle: '',
+  makeup_artist: '',
+  photographer: '',
+  model_name: '',
+  hair_stylist: '',
+  stylist_creative_director: '',
+  location: '',
+  project_date: null,
+  additional_credits: '',
+}
+
+function normalizeRows(rows: unknown[]): PortfolioRow[] {
+  return rows.map((row) => ({ ...emptyDetails, ...(row as PortfolioRow) }))
+}
+
+function isMissingPortfolioDetails(error: { code?: string; message?: string } | null) {
+  if (!error) return false
+  return error.code === '42703' || error.code === 'PGRST204' || /subtitle|makeup_artist|model_name|project_date/.test(error.message ?? '')
+}
+
+async function selectPortfolioRows(publishedOnly: boolean, featuredOnly = false): Promise<PortfolioRow[]> {
+  const client = getClient()
+  const makeQuery = (selection: string) => {
+    let query = client.from('portfolio_items').select(selection).order('display_order', { ascending: true })
+    if (publishedOnly) query = query.eq('published', true)
+    if (featuredOnly) query = query.eq('featured', true).limit(3)
+    return query
+  }
+
+  const expanded = await makeQuery(columns)
+  if (!expanded.error) return normalizeRows(expanded.data ?? [])
+  if (!isMissingPortfolioDetails(expanded.error)) throw new Error(expanded.error.message)
+
+  const legacy = await makeQuery(legacyColumns)
+  if (legacy.error) throw new Error(legacy.error.message)
+  return normalizeRows(legacy.data ?? [])
+}
 
 export async function fetchAdminPortfolio(): Promise<PortfolioRecord[]> {
-  const client = getClient()
-  const { data, error } = await client.from('portfolio_items').select(columns).order('display_order', { ascending: true })
-  if (error) throw new Error(error.message)
-  return addSignedUrls((data ?? []) as Omit<PortfolioRecord, 'signedUrl'>[])
+  return addSignedUrls(await selectPortfolioRows(false))
 }
 
 export async function fetchPublishedPortfolio(featuredOnly = false): Promise<PortfolioRecord[]> {
-  const client = getClient()
-  let query = client
-    .from('portfolio_items')
-    .select(columns)
-    .eq('published', true)
-    .order('display_order', { ascending: true })
-
-  if (featuredOnly) query = query.eq('featured', true).limit(3)
-
-  const { data, error } = await query
-  if (error) throw new Error(error.message)
-  return addSignedUrls((data ?? []) as Omit<PortfolioRecord, 'signedUrl'>[], PUBLIC_SIGNED_URL_LIFETIME_SECONDS)
+  return addSignedUrls(await selectPortfolioRows(true, featuredOnly), PUBLIC_SIGNED_URL_LIFETIME_SECONDS)
 }
 
 export function toGalleryItems(records: PortfolioRecord[]): PortfolioGalleryItem[] {
   const tones: PortfolioPlaceholderTone[] = ['mist', 'stone', 'pearl', 'warm']
   return records.map((record, index) => ({
     id: record.id,
-    title: record.title || 'Untitled',
+    title: record.title,
+    subtitle: record.subtitle,
     description: record.description,
+    makeupArtist: record.makeup_artist,
+    photographer: record.photographer,
+    model: record.model_name,
+    hairStylist: record.hair_stylist,
+    stylistCreativeDirector: record.stylist_creative_director,
+    location: record.location,
+    projectDate: record.project_date,
+    additionalCredits: record.additional_credits,
     category: record.category,
     order: record.display_order,
     imageUrl: record.signedUrl,
@@ -85,10 +122,12 @@ export async function uploadPortfolioImage(
   if (uploadError) throw new Error(uploadError.message)
 
   onStage?.('saving')
+  const includesDetails = hasPortfolioDetails(input)
+  const insert = includesDetails ? input : toLegacyInput(input)
   const { data, error: insertError } = await client
     .from('portfolio_items')
-    .insert({ ...input, image_path: imagePath })
-    .select(columns)
+    .insert({ ...insert, image_path: imagePath })
+    .select(includesDetails ? columns : legacyColumns)
     .single()
 
   if (insertError) {
@@ -96,7 +135,7 @@ export async function uploadPortfolioImage(
     throw new Error(insertError.message)
   }
 
-  const [record] = await addSignedUrls([data as Omit<PortfolioRecord, 'signedUrl'>])
+  const [record] = await addSignedUrls(normalizeRows([data]))
   return record
 }
 
@@ -105,16 +144,56 @@ export async function updatePortfolioItem(
   updates: Partial<PortfolioRecordInput>,
 ): Promise<PortfolioRecord> {
   const client = getClient()
-  const { data, error } = await client
+  let { data, error } = await client
     .from('portfolio_items')
     .update(updates)
     .eq('id', id)
     .select(columns)
     .single()
 
+  if (error && isMissingPortfolioDetails(error) && !hasPortfolioDetails(updates)) {
+    const legacy = await client
+      .from('portfolio_items')
+      .update(toLegacyInput(updates))
+      .eq('id', id)
+      .select(legacyColumns)
+      .single()
+    data = legacy.data ? ({ ...emptyDetails, ...legacy.data } as typeof data) : null
+    error = legacy.error
+  }
   if (error) throw new Error(error.message)
   const [record] = await addSignedUrls([data as Omit<PortfolioRecord, 'signedUrl'>])
   return record
+}
+
+function hasPortfolioDetails(input: Partial<PortfolioRecordInput>) {
+  return Boolean(
+    input.subtitle?.trim()
+    || input.makeup_artist?.trim()
+    || input.photographer?.trim()
+    || input.model_name?.trim()
+    || input.hair_stylist?.trim()
+    || input.stylist_creative_director?.trim()
+    || input.location?.trim()
+    || input.project_date
+    || input.additional_credits?.trim(),
+  )
+}
+
+function toLegacyInput(input: Partial<PortfolioRecordInput>) {
+  const {
+    subtitle: _subtitle,
+    makeup_artist: _makeupArtist,
+    photographer: _photographer,
+    model_name: _model,
+    hair_stylist: _hairStylist,
+    stylist_creative_director: _stylist,
+    location: _location,
+    project_date: _projectDate,
+    additional_credits: _additionalCredits,
+    ...legacy
+  } = input
+  return legacy
 }
 
 export async function updatePortfolioOrder(items: PortfolioRecord[]): Promise<void> {
@@ -147,7 +226,7 @@ export async function replacePortfolioImage(
     .from('portfolio_items')
     .update({ image_path: newPath, width: dimensions.width, height: dimensions.height })
     .eq('id', record.id)
-    .select(columns)
+    .select(legacyColumns)
     .single()
 
   if (updateError) {
@@ -156,7 +235,7 @@ export async function replacePortfolioImage(
   }
 
   const { error: removeError } = await client.storage.from(BUCKET).remove([record.image_path])
-  const [updatedRecord] = await addSignedUrls([data as Omit<PortfolioRecord, 'signedUrl'>])
+  const [updatedRecord] = await addSignedUrls(normalizeRows([data]))
   return {
     record: updatedRecord,
     warning: removeError ? 'The image was replaced, but the old Storage object could not be removed.' : null,

@@ -29,6 +29,7 @@ export type PortfolioPlaceholderTone = 'mist' | 'stone' | 'pearl' | 'warm'
 export interface PortfolioGalleryItem {
   id: string
   title: string
+  subtitle?: string
   category: PortfolioCategory
   order: number
   imageUrl: string | null
@@ -37,6 +38,14 @@ export interface PortfolioGalleryItem {
   aspectRatio: string
   placeholderTone: PortfolioPlaceholderTone
   description?: string
+  makeupArtist?: string
+  photographer?: string
+  model?: string
+  hairStylist?: string
+  stylistCreativeDirector?: string
+  location?: string
+  projectDate?: string | null
+  additionalCredits?: string
   width?: number | null
   height?: number | null
 }
@@ -44,6 +53,7 @@ export interface PortfolioGalleryItem {
 export interface PortfolioRecord {
   id: string
   title: string
+  subtitle: string
   description: string
   alt_text: string
   category: PortfolioCategory
@@ -53,6 +63,14 @@ export interface PortfolioRecord {
   published: boolean
   width: number | null
   height: number | null
+  makeup_artist: string
+  photographer: string
+  model_name: string
+  hair_stylist: string
+  stylist_creative_director: string
+  location: string
+  project_date: string | null
+  additional_credits: string
   created_at: string
   updated_at: string
   signedUrl: string | null
@@ -60,6 +78,7 @@ export interface PortfolioRecord {
 
 export interface PortfolioRecordInput {
   title: string
+  subtitle: string
   description: string
   alt_text: string
   category: PortfolioCategory
@@ -68,4 +87,12 @@ export interface PortfolioRecordInput {
   published: boolean
   width: number | null
   height: number | null
+  makeup_artist: string
+  photographer: string
+  model_name: string
+  hair_stylist: string
+  stylist_creative_director: string
+  location: string
+  project_date: string | null
+  additional_credits: string
 }

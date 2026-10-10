@@ -103,7 +103,8 @@ export function PortfolioUploadPanel({ nextOrder, onUploaded, onMessage }: Portf
       patchPending(item.id, { status: 'uploading', error: null })
       try {
         await uploadPortfolioImage(item.file, {
-          title: item.title.trim() || 'Untitled',
+          title: item.title.trim(),
+          subtitle: '',
           description: item.description.trim(),
           alt_text: item.title.trim() || 'Portfolio image',
           category: item.category,
@@ -112,6 +113,14 @@ export function PortfolioUploadPanel({ nextOrder, onUploaded, onMessage }: Portf
           published: item.published,
           width: item.width,
           height: item.height,
+          makeup_artist: '',
+          photographer: '',
+          model_name: '',
+          hair_stylist: '',
+          stylist_creative_director: '',
+          location: '',
+          project_date: null,
+          additional_credits: '',
         }, (stage) => patchPending(item.id, { status: stage }))
         patchPending(item.id, { status: 'done' })
         successes += 1

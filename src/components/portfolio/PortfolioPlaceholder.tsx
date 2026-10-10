@@ -29,5 +29,5 @@ export function PortfolioPlaceholder({ item, className = '', priority = false }:
     )
   }
 
-  return <div aria-label={`${item.title} image placeholder`} role="img" className={`h-full w-full ${tones[item.placeholderTone]} ${className}`} />
+  return <div aria-label={`${item.title || item.category} image placeholder`} role="img" className={`h-full w-full ${tones[item.placeholderTone]} ${className}`} />
 }

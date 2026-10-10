@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import type { PortfolioGalleryItem } from '../../types/content'
+import { PortfolioDetails } from './PortfolioDetails'
 import { PortfolioPlaceholder } from './PortfolioPlaceholder'
 
 interface PortfolioLightboxProps {
@@ -56,61 +57,65 @@ export function PortfolioLightbox({ items, activeIndex, onClose, onChange }: Por
 
   const previousIndex = (activeIndex - 1 + items.length) % items.length
   const nextIndex = (activeIndex + 1) % items.length
+  const counter = `${String(activeIndex + 1).padStart(2, '0')} / ${String(items.length).padStart(2, '0')}`
+  const accessibleTitle = item.title || `${item.category} portfolio image`
 
   return (
     <div
       ref={dialogRef}
-      className="fixed inset-0 z-[100] flex bg-ink/98 text-ivory animate-lightbox-in"
+      className="fixed inset-0 z-[100] overflow-y-auto bg-ink text-ivory animate-lightbox-in"
       role="dialog"
       aria-modal="true"
-      aria-label={`${item.title} lightbox`}
-      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+      aria-labelledby="portfolio-lightbox-title"
     >
       <button
         ref={closeButtonRef}
         type="button"
         onClick={onClose}
-        className="absolute right-4 top-4 z-20 grid size-12 place-items-center rounded-full text-ivory transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:right-7 sm:top-6"
+        className="fixed right-4 top-4 z-30 grid size-12 place-items-center rounded-full bg-ink/45 text-ivory backdrop-blur-sm transition-colors hover:bg-white hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:right-7 sm:top-6"
         aria-label="Close lightbox"
       >
         <X size={26} strokeWidth={1.25} />
       </button>
 
-      <button
-        type="button"
-        onClick={() => onChange(previousIndex)}
-        className="absolute bottom-5 left-4 z-20 grid size-12 place-items-center rounded-full border border-white/25 transition-colors hover:bg-white hover:text-ink focus-visible:outline focus-visible:outline-2 sm:bottom-auto sm:left-7 sm:top-1/2 sm:-translate-y-1/2"
-        aria-label="Previous image"
-      >
-        <ChevronLeft size={26} strokeWidth={1.25} />
-      </button>
-
-      <div className="m-auto flex h-full w-full flex-col items-center justify-center px-5 py-24 sm:px-24 sm:py-16">
-        <div
-          className="max-h-[72vh] w-auto max-w-full overflow-hidden"
-          style={{ aspectRatio: item.aspectRatio, height: 'min(72vh, 900px)' }}
-        >
-          <PortfolioPlaceholder item={item} priority />
-        </div>
-        <div className="mt-5 flex w-full max-w-2xl items-baseline justify-between gap-5">
-          <div>
-            <p className="font-serif text-2xl">{item.title}</p>
-            <p className="mt-1 text-xs uppercase tracking-[0.22em] text-ivory/55">{item.category}</p>
+      <div className="grid min-h-full lg:grid-cols-[minmax(0,1.65fr)_minmax(21rem,0.65fr)]">
+        <div className="flex min-h-[68svh] items-center justify-center px-5 pb-8 pt-20 sm:px-20 sm:pb-12 lg:min-h-screen lg:px-16 lg:py-20">
+          <div
+            className="max-h-[72svh] max-w-full overflow-hidden lg:max-h-[82svh]"
+            style={{ aspectRatio: item.aspectRatio, height: 'min(72svh, 900px)' }}
+          >
+            <PortfolioPlaceholder item={item} priority className="object-contain" />
           </div>
-          <p className="text-xs tracking-[0.2em] text-ivory/45">
-            {String(activeIndex + 1).padStart(2, '0')} / {String(items.length).padStart(2, '0')}
-          </p>
         </div>
+
+        <aside className="border-t border-ivory/15 px-5 pb-28 pt-9 sm:px-10 lg:flex lg:min-h-screen lg:items-center lg:border-l lg:border-t-0 lg:px-10 lg:py-24">
+          <div className="w-full">
+            <span id="portfolio-lightbox-title" className="sr-only">{accessibleTitle}</span>
+            <PortfolioDetails item={item} counter={counter} />
+          </div>
+        </aside>
       </div>
 
-      <button
-        type="button"
-        onClick={() => onChange(nextIndex)}
-        className="absolute bottom-5 right-4 z-20 grid size-12 place-items-center rounded-full border border-white/25 transition-colors hover:bg-white hover:text-ink focus-visible:outline focus-visible:outline-2 sm:bottom-auto sm:right-7 sm:top-1/2 sm:-translate-y-1/2"
-        aria-label="Next image"
-      >
-        <ChevronRight size={26} strokeWidth={1.25} />
-      </button>
+      {items.length > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={() => onChange(previousIndex)}
+            className="fixed bottom-5 left-4 z-20 grid size-12 place-items-center rounded-full border border-white/25 bg-ink/45 backdrop-blur-sm transition-colors hover:bg-white hover:text-ink focus-visible:outline focus-visible:outline-2 sm:left-7 lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2"
+            aria-label="Previous image"
+          >
+            <ChevronLeft size={26} strokeWidth={1.25} />
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange(nextIndex)}
+            className="fixed bottom-5 right-4 z-20 grid size-12 place-items-center rounded-full border border-white/25 bg-ink/45 backdrop-blur-sm transition-colors hover:bg-white hover:text-ink focus-visible:outline focus-visible:outline-2 sm:right-7 lg:bottom-auto lg:top-1/2 lg:-translate-y-1/2"
+            aria-label="Next image"
+          >
+            <ChevronRight size={26} strokeWidth={1.25} />
+          </button>
+        </>
+      )}
     </div>
   )
 }

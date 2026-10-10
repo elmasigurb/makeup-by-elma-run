@@ -37,6 +37,17 @@ This migration adds structured service details and pricing fields to the
 existing `services` table. It does not replace the table or alter its existing
 admin-only write and published-only public read policies.
 
+For editable portfolio project details and professional credits, apply:
+
+```text
+202610100007_portfolio_project_details.sql
+```
+
+This additive migration adds optional subtitle, credit, location, date, and
+additional-credit fields to `portfolio_items`. Existing portfolio records,
+images, ordering, featured state, publication state, Storage policies, and RLS
+policies are preserved. Apply it before editing or saving the new credit fields.
+
 ## Booking inquiries
 
 Apply the inquiry migration after the earlier migrations:
